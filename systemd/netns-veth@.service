@@ -1,0 +1,13 @@
+[Unit]
+Description=Virtual ethernet cable to netns %i
+BindsTo=netns@%i.service
+After=netns@%i.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/scripts/netns-veth start %i /etc/netns-veth/%i.conf
+ExecStop=/opt/scripts/netns-veth stop %i /etc/netns-veth/%i.conf
+
+[Install]
+WantedBy=networking.target

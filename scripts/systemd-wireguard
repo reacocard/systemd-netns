@@ -1,0 +1,58 @@
+#!/bin/sh
+# Usage: systemd-wireguard (start|stop) <wg interface name> <wireguard conf> <systemd-wireguard conf>
+#
+# see wg(8) for details on the wireguard conf format
+#
+# systemd-wireguard conf is just a file setting various shell variables.
+# omit a variable to skip enabling that feature.
+#   NETNS=<network namespace name>
+#   ADDR4=<ipv4 address for wg interface>
+#   ADDR6=<ipv6 address for wg interface>
+#   ROUTE=<route to add, as given to "ip addr route add">
+#   MTU=<mtu, number of bytes>
+#   QDISC=<queueing discipline and parameters>
+
+set -e
+
+. $4
+
+case $1 in
+	start)
+		ip link add $2 type wireguard
+		if [ -n "$NETNS" ]; then
+			ip link set $2 netns $NETNS
+			ip netns exec $NETNS wg setconf $2 $3
+			IP_CMD="ip -n $NETNS"
+		else
+			wg setconf $2 $3
+			IP_CMD=ip
+		fi
+		if [ -n "$ADDR4" ]; then
+			$IP_CMD addr add "$ADDR4" dev $2
+		fi
+		if [ -n "$ADDR6" ]; then
+			$IP_CMD addr add "$ADDR6" dev $2
+		fi
+		if [ -n "$MTU" ]; then
+			$IP_CMD link set $2 mtu "$MTU"
+		fi
+		$IP_CMD link set $2 up
+		if [ -n "$ROUTE" ]; then
+			$IP_CMD route add $ROUTE
+		fi
+		if [ -n "$QDISC" ]; then
+			tc -netns $NETNS qdisc replace dev $2 root $QDISC
+		fi
+		;;
+	stop)
+		if [ -n "$NETNS" ]; then
+			ip -n $NETNS link del $2
+		else
+			ip link del $2
+		fi
+		;;
+	*)
+		echo "Unrecognized command $1"
+		exit 1
+		;;
+esac

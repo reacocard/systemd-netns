@@ -1,0 +1,21 @@
+# Instances of this service that wish to provide connections to a netns from
+# netns@.service must have overrides adding BindsTo=netns@<ns>.service and
+# After=netns@<ns>.service
+# Do not use JoinsNamespaceOf unless you want wireguard's outgoing traffic 
+# to originate from a different namespace.
+[Unit]
+Description=Wireguard tunnel %i
+# Because wireguard can block on name resolution if configs use a domain name
+# to specify the remote peer location, it must not be brought up until we have
+# an active internet connection.
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/scripts/systemd-wireguard start %i /etc/wireguard/%i.conf /etc/wireguard/%i.systemd.conf
+ExecStop=/opt/scripts/systemd-wireguard stop %i /etc/wireguard/%i.conf /etc/wireguard/%i.systemd.conf
+
+[Install]
+WantedBy=multi-user.target

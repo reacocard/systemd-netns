@@ -1,0 +1,30 @@
+#!/bin/sh
+# Usage: netns-veth (start|stop) <netns name> <netns-veth conf file>
+#
+# Creates interfaces <netns>-o on the host and <netns>-i inside <netns>
+#
+# netns-veth conf file is a file setting shell variables
+#   IP_INNER=<ip for inside the namespace>
+#   IP_OUTER=<ip for outside the namespace>
+
+set -e
+
+. $3
+
+case $1 in
+	start)
+		ip link add $2-i type veth peer name $2-o
+		ip link set $2-i netns $2
+		ip -n $2 addr add $IP_INNER dev $2-i
+		ip addr add $IP_OUTER dev $2-o
+		ip -n $2 link set $2-i up
+		ip link set $2-o up
+		;;
+	stop)
+		ip link del $2-o
+		;;
+	*)
+		echo "Unrecognized command $1"
+		exit 1
+		;;
+esac

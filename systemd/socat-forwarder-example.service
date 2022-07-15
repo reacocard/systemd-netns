@@ -1,0 +1,21 @@
+# Note that this is only needed to allow access from other systems/namespaces, any service running in the netns holding the <netns>-o interface can directly connect to addresses on <netns>-i
+[Unit]
+Description=Example of how to forward a port to a service running inside a network namespace
+# Change out myservice and foo for your service and netns
+Requires=myservice.service netns-veth@foo.service
+After=myservice.service netns-veth@foo.service
+
+[Service]
+Type=simple
+# eth0 is the external interface to listen on, 172.25.1.1 is the ip the service inside the namespace is running on
+ExecStart=socat -d -s TCP-LISTEN:54321,so-bindtodevice=eth0,fork TCP:172.25.1.1:54321
+# The syslog identifer defaults to the process name, which is not very useful
+# if you have multiple socat forwarders on a system.
+SyslogIdentifier=%n
+
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+
+

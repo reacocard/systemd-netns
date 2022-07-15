@@ -1,0 +1,22 @@
+# To run a service in this namespace, add JoinsNamespaceOf=netns@foo.service,
+# Requires=netns@foo.service, After=netns@foo.service and PrivateNetwork=yes
+# to that service's unit file or overrides.
+# You may also need Requires= and After= for netns-veth@foo.service or
+# wireguard@foo.service if your service makes use of the network interfaces
+# they provide.
+[Unit]
+Description=Network namespace %i
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# Using PrivateNetwork lets systemd create/own the namespace so that
+# JoinsNamespaceOf can be used in other units, but systemd does not name the
+# namespace, so we use ip netns attach to give it a name.
+PrivateNetwork=yes
+ExecStart=/bin/sh -c '/sbin/ip netns attach %i $$$$'
+ExecStop=/usr/sbin/ip netns delete %i
+
+[Install]
+WantedBy=networking.target
